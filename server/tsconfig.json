@@ -9,14 +9,15 @@
     // See also https://aka.ms/tsconfig/module
     "module": "CommonJS",
     "target": "esnext",
-    "types": ["node"],
+    "types": ["node", "jest"]
+
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
     // and npm install -D @types/node
 
     // Other Outputs
-    "sourceMap": true,
+    ,"sourceMap": true,
     "declaration": true,
     "declarationMap": true,
 
