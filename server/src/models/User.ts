@@ -10,7 +10,17 @@ const userSchema = new Schema(
     },
     passwordHash: {
       type: String,
-      required: true
+      required: false 
+    },
+    googleId: {
+      type: String,
+      required: false,
+      unique: true,
+      sparse: true
+    },
+    profileImage: {
+      type: String,
+      default: ""
     }
   },
   { timestamps: true }
