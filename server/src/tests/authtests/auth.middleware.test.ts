@@ -14,7 +14,7 @@ describe("GET /debug/whoami - Middleware Protection", () => {
     const token = jwt.sign({ userId: "123", username: "user" }, secret);
     const res = await request(app)
       .get("/debug/whoami")
-      .set("Authorization", token); // שליחה ללא Bearer
+      .set("Authorization", token); 
 
     expect(res.status).toBe(401);
   });

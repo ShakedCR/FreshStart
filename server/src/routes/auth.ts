@@ -1,9 +1,12 @@
-import { Router } from "express";
-import { register, login, refresh, logout } from "../controllers/auth.controller";
+import express from "express";
+import { register, login, refresh, logout, googleLogin } from "../controllers/auth.controller";
 
-export const authRouter = Router();
+const router = express.Router();
 
-authRouter.post("/register", register);
-authRouter.post("/login", login);
-authRouter.post("/refresh", refresh);
-authRouter.post("/logout", logout);
+router.post("/register", register);
+router.post("/login", login);
+router.post("/refresh", refresh);
+router.post("/logout", logout);
+router.post("/google", googleLogin); 
+
+export const authRouter = router;

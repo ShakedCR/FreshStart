@@ -4,6 +4,9 @@ import jwt from "jsonwebtoken";
 import type { Request, Response } from "express";
 import { UserModel } from "../models/User";
 import { RefreshTokenModel } from "../models/RefreshToken";
+import { OAuth2Client } from "google-auth-library";
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const registerSchema = z.object({
   username: z.string().min(3).max(30),
@@ -88,6 +91,42 @@ export async function login(req: Request, res: Response) {
     });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function googleLogin(req: Request, res: Response) {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: "Google token required" });
+
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID as string,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      return res.status(400).json({ error: "Invalid Google token" });
+    }
+
+    let user = await UserModel.findOne({ username: payload.email });
+
+    if (!user) {
+            user = await UserModel.create({
+        username: payload.email,
+        googleId: payload.sub
+      });
+    }
+
+    const { accessToken, refreshToken } = await generateTokens(user._id.toString(), user.username);
+
+    return res.status(200).json({
+      accessToken,
+      refreshToken,
+      user: { id: user._id.toString(), username: user.username }
+    });
+  } catch (err) {
+    return res.status(400).json({ error: "Google authentication failed" });
   }
 }
 
