@@ -4,9 +4,6 @@ import jwt from "jsonwebtoken";
 import type { Request, Response } from "express";
 import { UserModel } from "../models/User";
 import { RefreshTokenModel } from "../models/RefreshToken";
-import { OAuth2Client } from "google-auth-library";
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const registerSchema = z.object({
   username: z.string().min(3).max(30),
@@ -99,20 +96,15 @@ export async function googleLogin(req: Request, res: Response) {
     const { credential } = req.body;
     if (!credential) return res.status(400).json({ error: "Google token required" });
 
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID as string,
-    });
+    const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${credential}`);
+    const payload = await response.json();
 
-    const payload = ticket.getPayload();
-    if (!payload || !payload.email) {
-      return res.status(400).json({ error: "Invalid Google token" });
-    }
+    if (!payload.email) return res.status(400).json({ error: "Invalid Google token" });
 
-    let user = await UserModel.findOne({ username: payload.email });
+    let user = await UserModel.findOne({ googleId: payload.sub });
 
     if (!user) {
-            user = await UserModel.create({
+      user = await UserModel.create({
         username: payload.email,
         googleId: payload.sub
       });
@@ -140,7 +132,7 @@ export async function refresh(req: Request, res: Response) {
   try {
     const secret = process.env.JWT_REFRESH_SECRET || "temp_refresh_456";
     const payload = jwt.verify(refreshToken, secret) as any;
-    
+
     const newAccessToken = jwt.sign(
       { userId: payload.userId, username: payload.username },
       process.env.JWT_SECRET || "temp_secret_123",
