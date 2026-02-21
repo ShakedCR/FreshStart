@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
 import { PostModel } from "../models/Post";
 import type { AuthenticatedRequest } from "../middleware/auth.middleware";
 import path from "path";
@@ -17,7 +17,9 @@ export async function createPost(req: AuthenticatedRequest, res: Response) {
       imagePath
     });
 
-    return res.status(201).json(post);
+    const populated = await post.populate({ path: "authorId", model: "User", select: "username profileImage" });
+
+    return res.status(201).json(populated);
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -33,8 +35,9 @@ export async function getFeed(req: AuthenticatedRequest, res: Response) {
     const posts = await PostModel.find(query)
       .sort({ _id: -1 })
       .limit(limit)
-      .populate("authorId", "username profileImage");
-const nextCursor = posts.length === limit ? posts[posts.length - 1]?._id ?? null : null;
+      .populate({ path: "authorId", model: "User", select: "username profileImage" });
+
+    const nextCursor = posts.length === limit ? posts[posts.length - 1]?._id ?? null : null;
 
     return res.status(200).json({ posts, nextCursor });
   } catch (err) {

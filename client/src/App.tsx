@@ -3,6 +3,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import FeedPage from "./pages/FeedPage";
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -11,7 +12,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" />} />
       <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/" />} />
-      <Route path="/" element={user ? <div style={{color:"white"}}>Welcome, {user.username}!</div> : <Navigate to="/login" />} />
+      <Route path="/" element={user ? <FeedPage /> : <Navigate to="/login" />} />
     </Routes>
   );
 }

@@ -6,7 +6,9 @@ describe("POST /auth/register - Comprehensive Tests", () => {
   beforeAll(async () => {
     const uri = process.env.MONGO_URI;
     if (!uri) throw new Error("MONGO_URI is missing");
-    await mongoose.connect(uri);
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(uri);
+    }
   });
 
   beforeEach(async () => {
@@ -15,7 +17,8 @@ describe("POST /auth/register - Comprehensive Tests", () => {
   });
 
   afterAll(async () => {
-    await mongoose.disconnect();
+    await mongoose.connection.collection("users").deleteMany({});
+    await mongoose.connection.collection("refreshtokens").deleteMany({});
   });
 
   it("should register a new user and return tokens without the password hash", async () => {
@@ -27,17 +30,14 @@ describe("POST /auth/register - Comprehensive Tests", () => {
     expect(res.body.accessToken).toBeTruthy();
     expect(res.body.refreshToken).toBeTruthy();
     expect(res.body.user.username).toBe("shaked");
-    
     expect(res.body.user.passwordHash).toBeUndefined();
   });
 
   it("should fail when registering with an existing username", async () => {
-   
     await request(app)
       .post("/auth/register")
       .send({ username: "shaked", password: "123456789012" });
 
-    
     const res = await request(app)
       .post("/auth/register")
       .send({ username: "shaked", password: "anotherpassword123" });

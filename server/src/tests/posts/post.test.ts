@@ -2,6 +2,7 @@ import request from "supertest";
 import mongoose from "mongoose";
 import { app } from "../../app";
 import jwt from "jsonwebtoken";
+import { UserModel } from "../../models/User";
 
 const secret = process.env.JWT_SECRET || "test_secret";
 
@@ -12,23 +13,27 @@ function generateToken(userId: string, username: string) {
 describe("Posts API", () => {
   let token: string;
   let userId: string;
-  let postId: string;
 
   beforeAll(async () => {
     const uri = process.env.MONGO_URI;
     if (!uri) throw new Error("MONGO_URI is missing");
-    await mongoose.connect(uri);
-    userId = new mongoose.Types.ObjectId().toString();
-    token = generateToken(userId, "testuser");
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(uri);
+    }
   });
 
   beforeEach(async () => {
     await mongoose.connection.collection("posts").deleteMany({});
+    await mongoose.connection.collection("users").deleteMany({});
+
+    const user = await UserModel.create({ username: "testuser", passwordHash: "fakehash" });
+    userId = user._id.toString();
+    token = generateToken(userId, "testuser");
   });
 
   afterAll(async () => {
     await mongoose.connection.collection("posts").deleteMany({});
-    await mongoose.disconnect();
+    await mongoose.connection.collection("users").deleteMany({});
   });
 
   it("should create a post successfully", async () => {
@@ -39,8 +44,7 @@ describe("Posts API", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.text).toBe("My first post");
-    expect(res.body.authorId).toBe(userId);
-    postId = res.body._id;
+    expect(res.body.authorId._id).toBe(userId);
   });
 
   it("should fail to create a post without text", async () => {

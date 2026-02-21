@@ -6,22 +6,24 @@ describe("POST /auth/login", () => {
   beforeAll(async () => {
     const uri = process.env.MONGO_URI;
     if (!uri) throw new Error("MONGO_URI is missing");
-    await mongoose.connect(uri);
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(uri);
+    }
   });
 
   beforeEach(async () => {
     await mongoose.connection.collection("users").deleteMany({});
     await mongoose.connection.collection("refreshtokens").deleteMany({});
-    
+
     await request(app)
       .post("/auth/register")
       .send({ username: "shaked", password: "123456789012" });
   });
 
   afterAll(async () => {
-    await mongoose.disconnect();
+    await mongoose.connection.collection("users").deleteMany({});
+    await mongoose.connection.collection("refreshtokens").deleteMany({});
   });
-
 
   it("should login successfully and return correct user object and tokens", async () => {
     const res = await request(app)
@@ -33,7 +35,7 @@ describe("POST /auth/login", () => {
     expect(res.body.refreshToken).toBeTruthy();
     expect(res.body.user.username).toBe("shaked");
     expect(res.body.user.id).toBeTruthy();
-    expect(res.body.user.passwordHash).toBeUndefined(); 
+    expect(res.body.user.passwordHash).toBeUndefined();
   });
 
   it("should fail with status 401 for non-existing user", async () => {
@@ -57,7 +59,8 @@ describe("POST /auth/login", () => {
   it("should fail with status 400 for missing fields (Zod validation)", async () => {
     const res = await request(app)
       .post("/auth/login")
-      .send({ username: "shaked" }); 
+      .send({ username: "shaked" });
+
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("Invalid input");
   });
