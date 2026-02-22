@@ -117,3 +117,39 @@ export async function deleteComment(commentId: string) {
   if (!res.ok) throw new Error(data.error || "Failed to delete comment");
   return data;
 }
+
+export async function getProfile(username: string) {
+  const token = localStorage.getItem("accessToken");
+  const res = await fetch(`http://localhost:3000/users/${username}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to get profile");
+  return data;
+}
+
+export async function updateProfile(username?: string, profileImage?: File) {
+  const token = localStorage.getItem("accessToken");
+  const formData = new FormData();
+  if (username) formData.append("username", username);
+  if (profileImage) formData.append("profileImage", profileImage);
+
+  const res = await fetch(`http://localhost:3000/users/me/update`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to update profile");
+  return data;
+}
+
+export async function getUserPosts(username: string) {
+  const token = localStorage.getItem("accessToken");
+  const res = await fetch(`http://localhost:3000/users/${username}/posts`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to get user posts");
+  return data;
+}

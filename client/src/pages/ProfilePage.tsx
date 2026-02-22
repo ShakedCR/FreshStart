@@ -1,16 +1,24 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Card, CardContent, Typography, Avatar,
   Button, TextField, IconButton, CircularProgress, Divider
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useAuth } from "../context/AuthContext";
-import { getFeed, createPost, editPost, deletePost, likePost, unlikePost, getComments, addComment, deleteComment } from "../services/post.service";
+import { getProfile, updateProfile, getUserPosts, likePost, unlikePost, getComments, addComment, deleteComment } from "../services/post.service";
+
+type Profile = {
+  _id: string;
+  username: string;
+  profileImage: string;
+  postsCount: number;
+  createdAt: string;
+};
 
 type Post = {
   _id: string;
@@ -19,7 +27,6 @@ type Post = {
   likesCount: number;
   commentsCount: number;
   createdAt: string;
-  liked?: boolean;
   authorId: {
     _id: string;
     username: string;
@@ -37,81 +44,66 @@ type Comment = {
   };
 };
 
-export default function FeedPage() {
-  const { user } = useAuth();
+export default function ProfilePage() {
+  const { username } = useParams<{ username: string }>();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
+
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [text, setText] = useState("");
-  const [image, setImage] = useState<File | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [newImage, setNewImage] = useState<File | null>(null);
+  const [error, setError] = useState("");
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [commentText, setCommentText] = useState("");
-  const loaderRef = useRef<HTMLDivElement | null>(null);
 
-  async function loadFeed(cursor?: string) {
-    setLoading(true);
-    try {
-      const data = await getFeed(cursor);
-      if (cursor) {
-        setPosts(prev => [...prev, ...data.posts]);
-      } else {
-        setPosts(data.posts);
-      }
-      setNextCursor(data.nextCursor);
-    } catch (err) {
-      console.error(err);
-    }
-    setLoading(false);
-  }
+  const isOwnProfile = user?.username === username;
 
   useEffect(() => {
-    loadFeed();
-  }, []);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && nextCursor && !loading) {
-        loadFeed(nextCursor);
+    async function load() {
+      setLoading(true);
+      try {
+        const [profileData, postsData] = await Promise.all([
+          getProfile(username!),
+          getUserPosts(username!)
+        ]);
+        setProfile(profileData);
+        setPosts(postsData);
+        setNewUsername(profileData.username);
+      } catch (err) {
+        console.error(err);
       }
-    });
-    if (loaderRef.current) observer.observe(loaderRef.current);
-    return () => observer.disconnect();
-  }, [nextCursor, loading]);
-
-  async function handleCreatePost() {
-    if (!text.trim()) return;
-    try {
-      const post = await createPost(text, image || undefined);
-      setPosts(prev => [post, ...prev]);
-      setText("");
-      setImage(null);
-    } catch (err) {
-      console.error(err);
+      setLoading(false);
     }
-  }
+    load();
+  }, [username]);
 
-  async function handleDelete(id: string) {
+  async function handleUpdateProfile() {
+    setError("");
     try {
-      await deletePost(id);
-      setPosts(prev => prev.filter(p => p._id !== id));
-    } catch (err) {
-      console.error(err);
-    }
-  }
+      const updated = await updateProfile(
+        newUsername !== profile?.username ? newUsername : undefined,
+        newImage || undefined
+      );
+      setProfile(prev => prev ? { ...prev, username: updated.username, profileImage: updated.profileImage } : prev);
 
-  async function handleEdit(id: string) {
-    try {
-      const updated = await editPost(id, editText);
-      setPosts(prev => prev.map(p => p._id === id ? { ...p, text: updated.text } : p));
-      setEditingId(null);
-      setEditText("");
-    } catch (err) {
-      console.error(err);
+      const token = localStorage.getItem("accessToken");
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (token && refreshToken) {
+        login({ ...user!, username: updated.username, profileImage: updated.profileImage }, token, refreshToken);
+      }
+
+      setEditing(false);
+      setNewImage(null);
+      if (updated.username !== username) {
+        navigate(`/profile/${updated.username}`);
+      }
+    } catch (err: any) {
+      setError(err.message);
     }
   }
 
@@ -167,6 +159,12 @@ export default function FeedPage() {
     }
   }
 
+  if (loading) return (
+    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "rgba(0,0,0,0.8)" }}>
+      <CircularProgress sx={{ color: "#a8e063" }} />
+    </Box>
+  );
+
   return (
     <Box sx={{
       minHeight: "100vh",
@@ -179,103 +177,68 @@ export default function FeedPage() {
         <Box sx={{ maxWidth: 600, mx: "auto", px: 2 }}>
 
           <Card sx={{ mb: 3, background: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 3 }}>
-            <CardContent>
-              <Typography variant="h6" color="white" mb={2}>Share your progress 🌱</Typography>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                placeholder="How are you feeling today?"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                InputLabelProps={{ style: { color: "rgba(255,255,255,0.6)" } }}
-                sx={{
-                  mb: 2,
-                  "& .MuiOutlinedInput-root": {
-                    color: "white",
-                    "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
-                    "&:hover fieldset": { borderColor: "rgba(255,255,255,0.5)" },
-                  }
-                }}
-              />
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Button variant="outlined" component="label" sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)" }}>
-                  {image ? image.name : "Add Image"}
-                  <input type="file" hidden accept="image/*" onChange={(e) => setImage(e.target.files?.[0] || null)} />
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={handleCreatePost}
-                  sx={{ background: "linear-gradient(135deg, #56ab2f, #a8e063)", fontWeight: "bold" }}
-                >
-                  Post
-                </Button>
-              </Box>
+            <CardContent sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 3 }}>
+              <Avatar
+                src={profile?.profileImage ? `http://localhost:3000${profile.profileImage}` : undefined}
+                sx={{ width: 90, height: 90, bgcolor: "#56ab2f", fontSize: 36, mb: 2 }}
+              >
+                {profile?.username?.[0]?.toUpperCase()}
+              </Avatar>
+
+              {editing ? (
+                <Box sx={{ width: "100%", maxWidth: 300 }}>
+                  <TextField
+                    fullWidth
+                    label="Username"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    sx={{
+                      mb: 2,
+                      "& .MuiOutlinedInput-root": {
+                        color: "white",
+                        "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
+                      },
+                      "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.6)" }
+                    }}
+                  />
+                  <Button variant="outlined" component="label" fullWidth sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)", mb: 2 }}>
+                    {newImage ? newImage.name : "Change Profile Image"}
+                    <input type="file" hidden accept="image/*" onChange={(e) => setNewImage(e.target.files?.[0] || null)} />
+                  </Button>
+                  {error && <Typography color="error" variant="body2" mb={1}>{error}</Typography>}
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <Button fullWidth variant="contained" onClick={handleUpdateProfile}
+                      sx={{ background: "linear-gradient(135deg, #56ab2f, #a8e063)" }}>
+                      Save
+                    </Button>
+                    <Button fullWidth variant="outlined" onClick={() => { setEditing(false); setError(""); }}
+                      sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)" }}>
+                      Cancel
+                    </Button>
+                  </Box>
+                </Box>
+              ) : (
+                <>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography variant="h5" color="white" fontWeight="bold">{profile?.username}</Typography>
+                    {isOwnProfile && (
+                      <IconButton onClick={() => setEditing(true)} sx={{ color: "rgba(255,255,255,0.6)" }}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
+                  <Typography variant="body2" color="rgba(255,255,255,0.5)" mt={1}>
+                    {profile?.postsCount} posts · Joined {new Date(profile?.createdAt || "").toLocaleDateString()}
+                  </Typography>
+                </>
+              )}
             </CardContent>
           </Card>
 
           {posts.map(post => (
             <Card key={post._id} sx={{ mb: 2, background: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 3 }}>
               <CardContent>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Avatar
-                      src={post.authorId?.profileImage ? `http://localhost:3000${post.authorId.profileImage}` : undefined}
-                      onClick={() => navigate(`/profile/${post.authorId?.username}`)}
-                      sx={{ width: 36, height: 36, bgcolor: "#56ab2f", cursor: "pointer" }}
-                    >
-                      {post.authorId?.username?.[0]?.toUpperCase()}
-                    </Avatar>
-                    <Typography
-                      color="white"
-                      fontWeight="bold"
-                      sx={{ cursor: "pointer" }}
-                      onClick={() => navigate(`/profile/${post.authorId?.username}`)}
-                    >
-                      {post.authorId?.username}
-                    </Typography>
-                  </Box>
-                  {user?.username === post.authorId?.username && (
-                    <Box>
-                      <IconButton onClick={() => { setEditingId(post._id); setEditText(post.text); }} sx={{ color: "rgba(255,255,255,0.6)" }}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(post._id)} sx={{ color: "rgba(255,255,255,0.6)" }}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  )}
-                </Box>
-
-                {editingId === post._id ? (
-                  <Box>
-                    <TextField
-                      fullWidth
-                      multiline
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      sx={{
-                        mb: 1,
-                        "& .MuiOutlinedInput-root": {
-                          color: "white",
-                          "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
-                        }
-                      }}
-                    />
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      <Button size="small" variant="contained" onClick={() => handleEdit(post._id)}
-                        sx={{ background: "linear-gradient(135deg, #56ab2f, #a8e063)" }}>
-                        Save
-                      </Button>
-                      <Button size="small" variant="outlined" onClick={() => setEditingId(null)}
-                        sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)" }}>
-                        Cancel
-                      </Button>
-                    </Box>
-                  </Box>
-                ) : (
-                  <Typography color="rgba(255,255,255,0.9)" mb={1}>{post.text}</Typography>
-                )}
+                <Typography color="rgba(255,255,255,0.9)" mb={1}>{post.text}</Typography>
 
                 {post.imagePath && (
                   <Box component="img"
@@ -351,10 +314,6 @@ export default function FeedPage() {
               </CardContent>
             </Card>
           ))}
-
-          <Box ref={loaderRef} sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-            {loading && <CircularProgress sx={{ color: "#a8e063" }} />}
-          </Box>
 
         </Box>
       </Box>
