@@ -62,3 +62,25 @@ export async function deletePost(id: string) {
   if (!res.ok) throw new Error(data.error || "Failed to delete post");
   return data;
 }
+
+export async function likePost(postId: string) {
+  const token = localStorage.getItem("accessToken");
+  const res = await fetch(`http://localhost:3000/likes/${postId}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to like post");
+  return data;
+}
+
+export async function unlikePost(postId: string) {
+  const token = localStorage.getItem("accessToken");
+  const res = await fetch(`http://localhost:3000/likes/${postId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to unlike post");
+  return data;
+}

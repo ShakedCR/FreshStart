@@ -5,8 +5,10 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { useAuth } from "../context/AuthContext";
-import { getFeed, createPost, editPost, deletePost } from "../services/post.service";
+import { getFeed, createPost, editPost, deletePost, likePost, unlikePost } from "../services/post.service";
 
 type Post = {
   _id: string;
@@ -15,6 +17,7 @@ type Post = {
   likesCount: number;
   commentsCount: number;
   createdAt: string;
+  liked?: boolean;
   authorId: {
     _id: string;
     username: string;
@@ -31,6 +34,7 @@ export default function FeedPage() {
   const [image, setImage] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
   async function loadFeed(cursor?: string) {
@@ -95,6 +99,22 @@ export default function FeedPage() {
     }
   }
 
+  async function handleLike(postId: string, isLiked: boolean) {
+    try {
+      if (isLiked) {
+        await unlikePost(postId);
+        setLikedPosts(prev => { const next = new Set(prev); next.delete(postId); return next; });
+        setPosts(prev => prev.map(p => p._id === postId ? { ...p, likesCount: p.likesCount - 1 } : p));
+      } else {
+        await likePost(postId);
+        setLikedPosts(prev => new Set(prev).add(postId));
+        setPosts(prev => prev.map(p => p._id === postId ? { ...p, likesCount: p.likesCount + 1 } : p));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   return (
     <Box sx={{
       minHeight: "100vh",
@@ -104,7 +124,6 @@ export default function FeedPage() {
       backgroundAttachment: "fixed",
     }}>
       <Box sx={{ background: "rgba(0,0,0,0.6)", minHeight: "100vh", py: 4 }}>
-
         <Box sx={{ maxWidth: 600, mx: "auto", px: 2 }}>
 
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
@@ -217,6 +236,18 @@ export default function FeedPage() {
                     sx={{ width: "100%", borderRadius: 2, mt: 1 }}
                   />
                 )}
+
+                <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+                  <IconButton
+                    onClick={() => handleLike(post._id, likedPosts.has(post._id))}
+                    sx={{ color: likedPosts.has(post._id) ? "#e57373" : "rgba(255,255,255,0.5)" }}
+                  >
+                    {likedPosts.has(post._id) ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+                  </IconButton>
+                  <Typography variant="body2" color="rgba(255,255,255,0.6)">
+                    {post.likesCount}
+                  </Typography>
+                </Box>
 
                 <Typography variant="caption" color="rgba(255,255,255,0.4)">
                   {new Date(post.createdAt).toLocaleDateString()}
