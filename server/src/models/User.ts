@@ -26,7 +26,30 @@ const userSchema = new Schema(
     profileImage: {
       type: String,
       default: ""
-    }
+    },
+    quittingStartDate: {
+      type: Date,
+      required: false,
+      default: null
+    },
+    quittingHistory: [
+      {
+        startDate: {
+          type: Date,
+          required: true
+        },
+        endDate: {
+          type: Date,
+          required: false,
+          default: null
+        },
+        daysSurvived: {
+          type: Number,
+          required: false,
+          default: 0
+        }
+      }
+    ]
   },
   { timestamps: true }
 );

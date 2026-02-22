@@ -9,6 +9,7 @@ import { postsRouter } from "./routes/posts";
 import { likesRouter } from "./routes/likes";
 import { commentsRouter } from "./routes/comments";
 import { usersRouter } from "./routes/users";
+import { quittingRouter } from "./routes/quitting";
 
 export const app = express();
 
@@ -25,6 +26,7 @@ app.use("/posts", postsRouter);
 app.use("/likes", likesRouter);
 app.use("/comments", commentsRouter);
 app.use("/users", usersRouter);
+app.use("/quitting", quittingRouter);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
