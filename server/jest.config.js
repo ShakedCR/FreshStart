@@ -8,5 +8,4 @@ module.exports = {
     ...tsJestTransformCfg,
   },
   setupFiles: ["<rootDir>/src/tests/jest.setup.ts"],
-  runInBand: true
 };
