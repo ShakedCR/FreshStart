@@ -60,7 +60,7 @@ export async function register(req: Request, res: Response) {
     return res.status(201).json({
       accessToken,
       refreshToken,
-      user: { id: user._id.toString(), username: user.username }
+      user: { id: user._id.toString(), username: user.username, profileImage: user.profileImage || "" }
     });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
@@ -84,7 +84,7 @@ export async function login(req: Request, res: Response) {
     return res.status(200).json({
       accessToken,
       refreshToken,
-      user: { id: user._id.toString(), username: user.username }
+      user: { id: user._id.toString(), username: user.username, profileImage: user.profileImage || "" }
     });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
@@ -115,7 +115,7 @@ export async function googleLogin(req: Request, res: Response) {
     return res.status(200).json({
       accessToken,
       refreshToken,
-      user: { id: user._id.toString(), username: user.username }
+      user: { id: user._id.toString(), username: user.username, profileImage: user.profileImage || "" }
     });
   } catch (err) {
     return res.status(400).json({ error: "Google authentication failed" });
