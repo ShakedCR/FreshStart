@@ -13,6 +13,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
 import { useAuth } from "../context/AuthContext";
 import { getProfile, updateProfile, getUserPosts, likePost, unlikePost, getComments, addComment, deleteComment } from "../services/post.service";
+import { QuittingCounter } from "../components/QuittingCounter";
 
 type Profile = {
   _id: string;
@@ -248,6 +249,16 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
+          {profile && (
+            <>
+              <QuittingCounter isOwnProfile={isOwnProfile} userId={profile._id} />
+              
+              <Typography variant="h6" color="white" mt={3} mb={2}>
+                Posts
+              </Typography>
+            </>
+          )}
+
           {posts.map(post => (
             <Card key={post._id} sx={{ mb: 2, background: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 3 }}>
               <CardContent>
@@ -279,6 +290,12 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
           ))}
+
+          {profile && posts.length === 0 && (
+            <Box sx={{ textAlign: "center", py: 4 }}>
+              <Typography color="rgba(255,255,255,0.5)">No posts yet</Typography>
+            </Box>
+          )}
 
         </Box>
       </Box>
