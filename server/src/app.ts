@@ -10,6 +10,8 @@ import { likesRouter } from "./routes/likes";
 import { commentsRouter } from "./routes/comments";
 import { usersRouter } from "./routes/users";
 import { quittingRouter } from "./routes/quitting";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./swagger";
 
 export const app = express();
 
@@ -31,3 +33,5 @@ app.use("/quitting", quittingRouter);
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
