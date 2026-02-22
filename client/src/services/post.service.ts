@@ -33,11 +33,12 @@ export async function createPost(text: string, image?: File) {
   return data;
 }
 
-export async function editPost(id: string, text: string, image?: File) {
+export async function editPost(id: string, text: string, image?: File | null) {
   const token = localStorage.getItem("accessToken");
   const formData = new FormData();
   formData.append("text", text);
   if (image) formData.append("image", image);
+  if (image === null) formData.append("removeImage", "true");
 
   const res = await fetch(`${BASE_URL}/posts/${id}`, {
     method: "PUT",
@@ -152,4 +153,42 @@ export async function getUserPosts(username: string) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Failed to get user posts");
   return data;
+}
+
+async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = localStorage.getItem("accessToken");
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...options.headers, Authorization: `Bearer ${token}` }
+  });
+
+  if (res.status === 401) {
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (!refreshToken) {
+      window.location.href = "/login";
+      return res;
+    }
+
+    const refreshRes = await fetch("http://localhost:3000/auth/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken })
+    });
+
+    if (!refreshRes.ok) {
+      localStorage.clear();
+      window.location.href = "/login";
+      return res;
+    }
+
+    const { accessToken } = await refreshRes.json();
+    localStorage.setItem("accessToken", accessToken);
+
+    return fetch(url, {
+      ...options,
+      headers: { ...options.headers, Authorization: `Bearer ${accessToken}` }
+    });
+  }
+
+  return res;
 }

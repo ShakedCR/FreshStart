@@ -2,19 +2,22 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Card, CardContent, Typography, Avatar,
-  Button, TextField, IconButton, CircularProgress, Divider
+  Button, TextField, IconButton, CircularProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
+import CloseIcon from "@mui/icons-material/Close";
 import { useAuth } from "../context/AuthContext";
 import { getProfile, updateProfile, getUserPosts, likePost, unlikePost, getComments, addComment, deleteComment } from "../services/post.service";
 
 type Profile = {
   _id: string;
   username: string;
+  email?: string;
   profileImage: string;
   postsCount: number;
   createdAt: string;
@@ -57,7 +60,7 @@ export default function ProfilePage() {
   const [newImage, setNewImage] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
-  const [openComments, setOpenComments] = useState<string | null>(null);
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [commentText, setCommentText] = useState("");
 
@@ -124,14 +127,11 @@ export default function ProfilePage() {
   }
 
   async function handleOpenComments(postId: string) {
-    if (openComments === postId) {
-      setOpenComments(null);
-      return;
-    }
     try {
       const data = await getComments(postId);
       setComments(prev => ({ ...prev, [postId]: data }));
-      setOpenComments(postId);
+      setCommentsPostId(postId);
+      setCommentText("");
     } catch (err) {
       console.error(err);
     }
@@ -194,13 +194,23 @@ export default function ProfilePage() {
                     onChange={(e) => setNewUsername(e.target.value)}
                     sx={{
                       mb: 2,
-                      "& .MuiOutlinedInput-root": {
-                        color: "white",
-                        "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
-                      },
+                      "& .MuiOutlinedInput-root": { color: "white", "& fieldset": { borderColor: "rgba(255,255,255,0.2)" } },
                       "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.6)" }
                     }}
                   />
+                  {profile?.email && (
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      value={profile.email}
+                      disabled
+                      sx={{
+                        mb: 2,
+                        "& .MuiOutlinedInput-root": { color: "rgba(255,255,255,0.4)", "& fieldset": { borderColor: "rgba(255,255,255,0.1)" } },
+                        "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.4)" }
+                      }}
+                    />
+                  )}
                   <Button variant="outlined" component="label" fullWidth sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)", mb: 2 }}>
                     {newImage ? newImage.name : "Change Profile Image"}
                     <input type="file" hidden accept="image/*" onChange={(e) => setNewImage(e.target.files?.[0] || null)} />
@@ -227,6 +237,9 @@ export default function ProfilePage() {
                       </IconButton>
                     )}
                   </Box>
+                  {profile?.email && (
+                    <Typography variant="body2" color="rgba(255,255,255,0.4)" mt={0.5}>{profile.email}</Typography>
+                  )}
                   <Typography variant="body2" color="rgba(255,255,255,0.5)" mt={1}>
                     {profile?.postsCount} posts · Joined {new Date(profile?.createdAt || "").toLocaleDateString()}
                   </Typography>
@@ -239,14 +252,12 @@ export default function ProfilePage() {
             <Card key={post._id} sx={{ mb: 2, background: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 3 }}>
               <CardContent>
                 <Typography color="rgba(255,255,255,0.9)" mb={1}>{post.text}</Typography>
-
                 {post.imagePath && (
                   <Box component="img"
                     src={`http://localhost:3000${post.imagePath}`}
                     sx={{ width: "100%", borderRadius: 2, mt: 1 }}
                   />
                 )}
-
                 <Box sx={{ display: "flex", alignItems: "center", mt: 1, gap: 1 }}>
                   <IconButton
                     onClick={() => handleLike(post._id, likedPosts.has(post._id))}
@@ -265,58 +276,74 @@ export default function ProfilePage() {
                     {new Date(post.createdAt).toLocaleDateString()}
                   </Typography>
                 </Box>
-
-                {openComments === post._id && (
-                  <Box sx={{ mt: 2 }}>
-                    <Divider sx={{ borderColor: "rgba(255,255,255,0.1)", mb: 2 }} />
-                    {(comments[post._id] || []).map(comment => (
-                      <Box key={comment._id} sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          <Avatar sx={{ width: 28, height: 28, bgcolor: "#56ab2f", fontSize: 12 }}>
-                            {comment.authorId?.username?.[0]?.toUpperCase()}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="body2" color="white" fontWeight="bold">{comment.authorId?.username}</Typography>
-                            <Typography variant="body2" color="rgba(255,255,255,0.8)">{comment.text}</Typography>
-                          </Box>
-                        </Box>
-                        {user?.username === comment.authorId?.username && (
-                          <IconButton onClick={() => handleDeleteComment(post._id, comment._id)} sx={{ color: "rgba(255,255,255,0.4)", p: 0.5 }}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                      </Box>
-                    ))}
-                    <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        placeholder="Write a comment..."
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            color: "white",
-                            "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
-                          }
-                        }}
-                      />
-                      <Button
-                        variant="contained"
-                        onClick={() => handleAddComment(post._id)}
-                        sx={{ background: "linear-gradient(135deg, #56ab2f, #a8e063)", whiteSpace: "nowrap" }}
-                      >
-                        Send
-                      </Button>
-                    </Box>
-                  </Box>
-                )}
               </CardContent>
             </Card>
           ))}
 
         </Box>
       </Box>
+
+      <Dialog
+        open={!!commentsPostId}
+        onClose={() => setCommentsPostId(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { background: "rgba(20,20,20,0.95)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "white" }}>
+          Comments
+          <IconButton onClick={() => setCommentsPostId(null)} sx={{ color: "rgba(255,255,255,0.6)" }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+          {commentsPostId && (comments[commentsPostId] || []).length === 0 && (
+            <Typography color="rgba(255,255,255,0.4)" textAlign="center">No comments yet</Typography>
+          )}
+          {commentsPostId && (comments[commentsPostId] || []).map(comment => (
+            <Box key={comment._id} sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Avatar sx={{ width: 28, height: 28, bgcolor: "#56ab2f", fontSize: 12 }}>
+                  {comment.authorId?.username?.[0]?.toUpperCase()}
+                </Avatar>
+                <Box>
+                  <Typography variant="body2" color="white" fontWeight="bold">{comment.authorId?.username}</Typography>
+                  <Typography variant="body2" color="rgba(255,255,255,0.8)">{comment.text}</Typography>
+                </Box>
+              </Box>
+              {user?.username === comment.authorId?.username && (
+                <IconButton onClick={() => handleDeleteComment(commentsPostId, comment._id)} sx={{ color: "rgba(255,255,255,0.4)", p: 0.5 }}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
+          ))}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Write a comment..."
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                color: "white",
+                "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
+              }
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={() => commentsPostId && handleAddComment(commentsPostId)}
+            sx={{ background: "linear-gradient(135deg, #56ab2f, #a8e063)", whiteSpace: "nowrap" }}
+          >
+            Send
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

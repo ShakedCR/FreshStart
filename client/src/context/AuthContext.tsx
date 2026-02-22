@@ -5,6 +5,7 @@ type User = {
   id: string;
   username: string;
   profileImage?: string;
+  email?: string;
 };
 
 type AuthContextType = {
