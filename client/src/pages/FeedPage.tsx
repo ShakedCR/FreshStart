@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Box, Card, CardContent, Typography, Avatar,
-  Button, TextField, IconButton, CircularProgress
+  Button, TextField, IconButton, CircularProgress, Divider
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import { useAuth } from "../context/AuthContext";
-import { getFeed, createPost, editPost, deletePost, likePost, unlikePost } from "../services/post.service";
+import { getFeed, createPost, editPost, deletePost, likePost, unlikePost, getComments, addComment, deleteComment } from "../services/post.service";
 
 type Post = {
   _id: string;
@@ -25,6 +26,16 @@ type Post = {
   };
 };
 
+type Comment = {
+  _id: string;
+  text: string;
+  createdAt: string;
+  authorId: {
+    _id: string;
+    username: string;
+  };
+};
+
 export default function FeedPage() {
   const { user, logout } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -35,6 +46,9 @@ export default function FeedPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [openComments, setOpenComments] = useState<string | null>(null);
+  const [comments, setComments] = useState<Record<string, Comment[]>>({});
+  const [commentText, setCommentText] = useState("");
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
   async function loadFeed(cursor?: string) {
@@ -110,6 +124,42 @@ export default function FeedPage() {
         setLikedPosts(prev => new Set(prev).add(postId));
         setPosts(prev => prev.map(p => p._id === postId ? { ...p, likesCount: p.likesCount + 1 } : p));
       }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleOpenComments(postId: string) {
+    if (openComments === postId) {
+      setOpenComments(null);
+      return;
+    }
+    try {
+      const data = await getComments(postId);
+      setComments(prev => ({ ...prev, [postId]: data }));
+      setOpenComments(postId);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleAddComment(postId: string) {
+    if (!commentText.trim()) return;
+    try {
+      const comment = await addComment(postId, commentText);
+      setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), comment] }));
+      setPosts(prev => prev.map(p => p._id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p));
+      setCommentText("");
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleDeleteComment(postId: string, commentId: string) {
+    try {
+      await deleteComment(commentId);
+      setComments(prev => ({ ...prev, [postId]: prev[postId].filter(c => c._id !== commentId) }));
+      setPosts(prev => prev.map(p => p._id === postId ? { ...p, commentsCount: p.commentsCount - 1 } : p));
     } catch (err) {
       console.error(err);
     }
@@ -237,21 +287,72 @@ export default function FeedPage() {
                   />
                 )}
 
-                <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mt: 1, gap: 1 }}>
                   <IconButton
                     onClick={() => handleLike(post._id, likedPosts.has(post._id))}
                     sx={{ color: likedPosts.has(post._id) ? "#e57373" : "rgba(255,255,255,0.5)" }}
                   >
                     {likedPosts.has(post._id) ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
                   </IconButton>
-                  <Typography variant="body2" color="rgba(255,255,255,0.6)">
-                    {post.likesCount}
+                  <Typography variant="body2" color="rgba(255,255,255,0.6)">{post.likesCount}</Typography>
+
+                  <IconButton onClick={() => handleOpenComments(post._id)} sx={{ color: "rgba(255,255,255,0.5)" }}>
+                    <ChatBubbleOutlineIcon fontSize="small" />
+                  </IconButton>
+                  <Typography variant="body2" color="rgba(255,255,255,0.6)">{post.commentsCount}</Typography>
+
+                  <Typography variant="caption" color="rgba(255,255,255,0.4)" sx={{ ml: "auto" }}>
+                    {new Date(post.createdAt).toLocaleDateString()}
                   </Typography>
                 </Box>
 
-                <Typography variant="caption" color="rgba(255,255,255,0.4)">
-                  {new Date(post.createdAt).toLocaleDateString()}
-                </Typography>
+                {openComments === post._id && (
+                  <Box sx={{ mt: 2 }}>
+                    <Divider sx={{ borderColor: "rgba(255,255,255,0.1)", mb: 2 }} />
+
+                    {(comments[post._id] || []).map(comment => (
+                      <Box key={comment._id} sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          <Avatar sx={{ width: 28, height: 28, bgcolor: "#56ab2f", fontSize: 12 }}>
+                            {comment.authorId?.username?.[0]?.toUpperCase()}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2" color="white" fontWeight="bold">{comment.authorId?.username}</Typography>
+                            <Typography variant="body2" color="rgba(255,255,255,0.8)">{comment.text}</Typography>
+                          </Box>
+                        </Box>
+                        {user?.username === comment.authorId?.username && (
+                          <IconButton onClick={() => handleDeleteComment(post._id, comment._id)} sx={{ color: "rgba(255,255,255,0.4)", p: 0.5 }}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Box>
+                    ))}
+
+                    <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="Write a comment..."
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            color: "white",
+                            "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
+                          }
+                        }}
+                      />
+                      <Button
+                        variant="contained"
+                        onClick={() => handleAddComment(post._id)}
+                        sx={{ background: "linear-gradient(135deg, #56ab2f, #a8e063)", whiteSpace: "nowrap" }}
+                      >
+                        Send
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           ))}

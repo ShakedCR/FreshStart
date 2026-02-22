@@ -84,3 +84,36 @@ export async function unlikePost(postId: string) {
   if (!res.ok) throw new Error(data.error || "Failed to unlike post");
   return data;
 }
+
+export async function getComments(postId: string) {
+  const token = localStorage.getItem("accessToken");
+  const res = await fetch(`http://localhost:3000/comments/${postId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to get comments");
+  return data;
+}
+
+export async function addComment(postId: string, text: string) {
+  const token = localStorage.getItem("accessToken");
+  const res = await fetch(`http://localhost:3000/comments/${postId}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ text })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to add comment");
+  return data;
+}
+
+export async function deleteComment(commentId: string) {
+  const token = localStorage.getItem("accessToken");
+  const res = await fetch(`http://localhost:3000/comments/${commentId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to delete comment");
+  return data;
+}
