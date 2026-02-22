@@ -7,6 +7,7 @@ import { authRouter } from "./routes/auth";
 import { debugRouter } from "./routes/debug";
 import { postsRouter } from "./routes/posts";
 import { likesRouter } from "./routes/likes";
+import { commentsRouter } from "./routes/comments";
 
 export const app = express();
 
@@ -21,6 +22,7 @@ app.use("/debug", debugRouter);
 app.use("/auth", authRouter);
 app.use("/posts", postsRouter);
 app.use("/likes", likesRouter);
+app.use("/comments", commentsRouter);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
