@@ -60,7 +60,7 @@ export async function register(req: Request, res: Response) {
     return res.status(201).json({
       accessToken,
       refreshToken,
-      user: { id: user._id.toString(), username: user.username, profileImage: user.profileImage || "" }
+      user: { id: user._id.toString(), username: user.username, profileImage: user.profileImage || "", email: user.email || "" }
     });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
@@ -84,7 +84,7 @@ export async function login(req: Request, res: Response) {
     return res.status(200).json({
       accessToken,
       refreshToken,
-      user: { id: user._id.toString(), username: user.username, profileImage: user.profileImage || "" }
+      user: { id: user._id.toString(), username: user.username, profileImage: user.profileImage || "", email: user.email || "" }
     });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
@@ -104,8 +104,15 @@ export async function googleLogin(req: Request, res: Response) {
     let user = await UserModel.findOne({ googleId: payload.sub });
 
     if (!user) {
+      const usernameFromEmail = payload.email.split("@")[0];
+      const existingUsername = await UserModel.findOne({ username: usernameFromEmail });
+      const finalUsername = existingUsername
+        ? `${usernameFromEmail}_${Math.floor(Math.random() * 1000)}`
+        : usernameFromEmail;
+
       user = await UserModel.create({
-        username: payload.email,
+        username: finalUsername,
+        email: payload.email,
         googleId: payload.sub
       });
     }
@@ -115,7 +122,7 @@ export async function googleLogin(req: Request, res: Response) {
     return res.status(200).json({
       accessToken,
       refreshToken,
-      user: { id: user._id.toString(), username: user.username, profileImage: user.profileImage || "" }
+      user: { id: user._id.toString(), username: user.username, profileImage: user.profileImage || "", email: user.email || "" }
     });
   } catch (err) {
     return res.status(400).json({ error: "Google authentication failed" });

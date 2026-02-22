@@ -48,7 +48,7 @@ export async function getFeed(req: AuthenticatedRequest, res: Response) {
 export async function editPost(req: AuthenticatedRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { text } = req.body;
+    const { text, removeImage } = req.body;
 
     const post = await PostModel.findById(id);
     if (!post) return res.status(404).json({ error: "Post not found" });
@@ -57,7 +57,11 @@ export async function editPost(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
-    if (req.file) {
+    if (removeImage === "true" && post.imagePath) {
+      const oldPath = path.join(__dirname, "../../", post.imagePath);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      post.imagePath = "";
+    } else if (req.file) {
       if (post.imagePath) {
         const oldPath = path.join(__dirname, "../../", post.imagePath);
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
@@ -68,12 +72,12 @@ export async function editPost(req: AuthenticatedRequest, res: Response) {
     if (text) post.text = text;
     await post.save();
 
-    return res.status(200).json(post);
+    const populated = await post.populate({ path: "authorId", model: "User", select: "username profileImage" });
+    return res.status(200).json(populated);
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }
 }
-
 export async function deletePost(req: AuthenticatedRequest, res: Response) {
   try {
     const { id } = req.params;
