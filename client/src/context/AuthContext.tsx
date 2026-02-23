@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 type User = {
   id: string;
   username: string;
@@ -44,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Helper function to refresh access token
   async function refreshAccessToken() {
     try {
       const refreshToken = localStorage.getItem("refreshToken");
@@ -53,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      const response = await fetch("http://localhost:3000/auth/refresh", {
+      const response = await fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken })
@@ -75,18 +76,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Wrapper for API calls that handles 401
   async function fetchWithRefresh(url: string, options: RequestInit = {}) {
+    const token = localStorage.getItem("accessToken");
+
     let response = await fetch(url, {
       ...options,
       headers: {
         ...options.headers,
-        Authorization: `Bearer ${accessToken}`
+        Authorization: `Bearer ${token}`
       }
     });
 
-    // If 401, try to refresh and retry
-    if (response.status === 401 && accessToken) {
+    if (response.status === 401) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         response = await fetch(url, {
@@ -105,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function refreshQuittingStats() {
     if (!accessToken) return;
     try {
-      const response = await fetchWithRefresh("http://localhost:3000/quitting/stats");
+      const response = await fetchWithRefresh(`${API_URL}/quitting/stats`);
       if (response.ok) {
         const data = await response.json();
         setQuittingStats(data);
@@ -117,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function startQuitting() {
     if (!accessToken) throw new Error("Not authenticated");
-    const response = await fetchWithRefresh("http://localhost:3000/quitting/start", {
+    const response = await fetchWithRefresh(`${API_URL}/quitting/start`, {
       method: "POST"
     });
     if (!response.ok) throw new Error("Failed to start quitting");
@@ -127,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function stopQuitting() {
     if (!accessToken) throw new Error("Not authenticated");
-    const response = await fetchWithRefresh("http://localhost:3000/quitting/stop", {
+    const response = await fetchWithRefresh(`${API_URL}/quitting/stop`, {
       method: "POST"
     });
     if (!response.ok) throw new Error("Failed to stop quitting");
@@ -136,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function updateQuittingDate(newDate: Date) {
     if (!accessToken) throw new Error("Not authenticated");
-    const response = await fetchWithRefresh("http://localhost:3000/quitting/update-date", {
+    const response = await fetchWithRefresh(`${API_URL}/quitting/update-date`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ newDate: newDate.toISOString() })
@@ -152,16 +153,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
-    // Fetch quitting stats immediately with the new token
     fetchQuittingStatsWithToken(accessToken);
   }
 
   async function fetchQuittingStatsWithToken(token: string) {
     try {
-      const response = await fetch("http://localhost:3000/quitting/stats", {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      const response = await fetch(`${API_URL}/quitting/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
