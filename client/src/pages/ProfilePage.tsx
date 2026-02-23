@@ -15,6 +15,8 @@ import { useAuth } from "../context/AuthContext";
 import { getProfile, updateProfile, getUserPosts, likePost, unlikePost, getComments, addComment, deleteComment } from "../services/post.service";
 import { QuittingCounter } from "../components/QuittingCounter";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 type Profile = {
   _id: string;
   username: string;
@@ -180,7 +182,7 @@ export default function ProfilePage() {
           <Card sx={{ mb: 3, background: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 3 }}>
             <CardContent sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 3 }}>
               <Avatar
-                src={profile?.profileImage ? `http://localhost:3000${profile.profileImage}` : undefined}
+                src={profile?.profileImage ? `${API_URL}${profile.profileImage}` : undefined}
                 sx={{ width: 90, height: 90, bgcolor: "#56ab2f", fontSize: 36, mb: 2 }}
               >
                 {profile?.username?.[0]?.toUpperCase()}
@@ -252,7 +254,6 @@ export default function ProfilePage() {
           {profile && (
             <>
               <QuittingCounter isOwnProfile={isOwnProfile} userId={profile._id} />
-              
               <Typography variant="h6" color="white" mt={3} mb={2}>
                 Posts
               </Typography>
@@ -265,7 +266,7 @@ export default function ProfilePage() {
                 <Typography color="rgba(255,255,255,0.9)" mb={1}>{post.text}</Typography>
                 {post.imagePath && (
                   <Box component="img"
-                    src={`http://localhost:3000${post.imagePath}`}
+                    src={`${API_URL}${post.imagePath}`}
                     sx={{ width: "100%", borderRadius: 2, mt: 1 }}
                   />
                 )}

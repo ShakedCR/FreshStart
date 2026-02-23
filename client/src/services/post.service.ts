@@ -162,3 +162,10 @@ export async function getUserPosts(username: string) {
   if (!res.ok) throw new Error(data.error || "Failed to get user posts");
   return data;
 }
+
+export async function searchPosts(query: string) {
+  const res = await fetchWithAuth(`${BASE_URL}/ai/search?q=${encodeURIComponent(query)}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Search failed");
+  return data;
+}

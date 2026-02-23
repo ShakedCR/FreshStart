@@ -15,6 +15,8 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export type Post = {
   _id: string;
   text: string;
@@ -90,7 +92,7 @@ export default function PostCard({
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Avatar
-              src={post.authorId?.profileImage ? `http://localhost:3000${post.authorId.profileImage}` : undefined}
+              src={post.authorId?.profileImage ? `${API_URL}${post.authorId.profileImage}` : undefined}
               onClick={() => onNavigateToProfile(post.authorId?.username)}
               sx={{ width: 36, height: 36, bgcolor: "#56ab2f", cursor: "pointer" }}
             >
@@ -139,7 +141,7 @@ export default function PostCard({
               <Box sx={{ mb: 1 }}>
                 <Box
                   component="img"
-                  src={`http://localhost:3000${post.imagePath}`}
+                  src={`${API_URL}${post.imagePath}`}
                   sx={{ width: "100%", borderRadius: 2, mb: 1 }}
                 />
                 <Button
@@ -201,7 +203,7 @@ export default function PostCard({
         {post.imagePath && !isEditing && (
           <Box
             component="img"
-            src={`http://localhost:3000${post.imagePath}`}
+            src={`${API_URL}${post.imagePath}`}
             sx={{ width: "100%", borderRadius: 2, mt: 1 }}
           />
         )}

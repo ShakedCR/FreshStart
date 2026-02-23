@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import FeedPage from "./pages/FeedPage";
 import ProfilePage from "./pages/ProfilePage";
+import SearchPage from "./pages/SearchPage";
 import { AppBar, Toolbar, Typography, Button, Avatar, Box } from "@mui/material";
 
 function Navbar() {
@@ -35,6 +36,9 @@ function Navbar() {
           <Button variant="outlined" onClick={() => navigate("/")} size="small" sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)" }}>
             Feed
           </Button>
+          <Button variant="outlined" onClick={() => navigate("/search")} size="small" sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)" }}>
+            AI Search
+          </Button>
           <Button variant="outlined" onClick={logout} size="small" sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)" }}>
             Logout
           </Button>
@@ -43,7 +47,7 @@ function Navbar() {
             sx={{ display: "flex", alignItems: "center", gap: 1, cursor: "pointer" }}
           >
             <Avatar
-              src={user.profileImage ? `http://localhost:3000${user.profileImage}` : undefined}
+              src={user.profileImage ? `${import.meta.env.VITE_API_URL}${user.profileImage}` : undefined}
               sx={{ width: 32, height: 32, bgcolor: "#56ab2f" }}
             >
               {user.username?.[0]?.toUpperCase()}
@@ -68,6 +72,7 @@ function AppRoutes() {
           <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/" />} />
           <Route path="/" element={user ? <FeedPage /> : <Navigate to="/login" />} />
           <Route path="/profile/:username" element={user ? <ProfilePage /> : <Navigate to="/login" />} />
+          <Route path="/search" element={user ? <SearchPage /> : <Navigate to="/login" />} />
         </Routes>
       </Box>
     </>

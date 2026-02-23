@@ -34,7 +34,7 @@ export function QuittingCounter({ isOwnProfile, userId }: QuittingCounterProps) 
 
   async function fetchPublicStats() {
     try {
-      const response = await fetch(`http://localhost:3000/quitting/${userId}/stats`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/quitting/${userId}/stats`);
       if (response.ok) {
         const data = await response.json();
         console.log("Fetched public stats:", data); // Debug log

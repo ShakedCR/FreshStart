@@ -82,7 +82,7 @@ export default function CommentsDialog({
           <Box key={comment._id} sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
             <Box sx={{ display: "flex", gap: 1 }}>
               <Avatar
-                src={comment.authorId?.profileImage ? `http://localhost:3000${comment.authorId.profileImage}` : undefined}
+                src={comment.authorId?.profileImage ? `${import.meta.env.VITE_API_URL}${comment.authorId.profileImage}` : undefined}
                 sx={{ width: 28, height: 28, bgcolor: "#56ab2f", fontSize: 12 }}
               >
                 {comment.authorId?.username?.[0]?.toUpperCase()}
