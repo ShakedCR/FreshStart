@@ -15,9 +15,10 @@ describe("POST /auth/refresh - Edge Cases", () => {
     await mongoose.connection.collection("refreshtokens").deleteMany({});
   });
 
-  afterAll(async () => {
-    await mongoose.disconnect();
-  });
+ afterAll(async () => {
+  await mongoose.connection.collection("users").deleteMany({});
+  await mongoose.connection.collection("refreshtokens").deleteMany({});
+});
 
   it("should fail if refresh token is missing from request body", async () => {
     const res = await request(app).post("/auth/refresh").send({});

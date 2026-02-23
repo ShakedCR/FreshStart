@@ -15,8 +15,9 @@ describe("POST /auth/logout", () => {
   });
 
   afterAll(async () => {
-    await mongoose.disconnect();
-  });
+  await mongoose.connection.collection("users").deleteMany({});
+  await mongoose.connection.collection("refreshtokens").deleteMany({});
+});
 
   it("should delete the refresh token on logout and prevent its reuse", async () => {
     const authRes = await request(app)

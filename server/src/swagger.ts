@@ -1,5 +1,10 @@
 import swaggerJsdoc from "swagger-jsdoc";
 
+const isProd = process.env.NODE_ENV === "production";
+const serverUrl = isProd 
+  ? "https://node70.cs.colman.ac.il" 
+  : "http://localhost:3000";
+
 const options: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.0.0",
@@ -9,8 +14,7 @@ const options: swaggerJsdoc.Options = {
       description: "API documentation for FreshStart - a social network for smoking cessation"
     },
     servers: [
-      { url: "http://localhost:3000", description: "Development" },
-      { url: "http://node70.cs.colman.ac.il:4000", description: "Production" }
+      { url: serverUrl }
     ],
     components: {
       securitySchemes: {
