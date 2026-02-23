@@ -1,9 +1,7 @@
 import swaggerJsdoc from "swagger-jsdoc";
 
 const isProd = process.env.NODE_ENV === "production";
-const serverUrl = isProd 
-  ? "https://node70.cs.colman.ac.il" 
-  : "http://localhost:3000";
+const serverUrl = process.env.BASE_URL || "http://localhost:3000";
 
 const options: swaggerJsdoc.Options = {
   definition: {

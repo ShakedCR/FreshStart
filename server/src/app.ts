@@ -12,6 +12,7 @@ import { usersRouter } from "./routes/users";
 import { quittingRouter } from "./routes/quitting";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./swagger";
+import { aiRouter } from "./routes/ai";
 
 export const app = express();
 
@@ -31,6 +32,7 @@ app.use("/likes", likesRouter);
 app.use("/comments", commentsRouter);
 app.use("/users", usersRouter);
 app.use("/quitting", quittingRouter);
+app.use("/ai", aiRouter);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
