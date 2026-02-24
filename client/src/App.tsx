@@ -66,7 +66,7 @@ function AppRoutes() {
   return (
     <>
       <Navbar />
-      <Box sx={{ pt: 8 }}>
+      <Box sx={{ pt: user ? 8 : 0 }}>
         <Routes>
           <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" />} />
           <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/" />} />

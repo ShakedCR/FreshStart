@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Card,
@@ -37,7 +37,7 @@ type Props = {
   currentUsername?: string;
   onNavigateToProfile: (username: string) => void;
   onDelete: (postId: string) => void;
-  onSaveEdit: (postId: string, text: string, image?: File | null) => void;
+  onSaveEdit: (postId: string, text: string, image?: File | null) => Promise<void> | void;
   onToggleLike: (postId: string, isLiked: boolean) => void;
   onOpenComments: (postId: string) => void;
   formatDateTime: (value: string) => string;
@@ -58,12 +58,27 @@ export default function PostCard({
   const [editText, setEditText] = useState(post.text);
   const [editImage, setEditImage] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditText(post.text);
+    }
+  }, [post.text, isEditing]);
+
+  useEffect(() => {
+    return () => {
+      if (previewImage) URL.revokeObjectURL(previewImage);
+    };
+  }, [previewImage]);
 
   function startEdit() {
     setIsEditing(true);
     setEditText(post.text);
     setEditImage(null);
     setRemoveImage(false);
+    setPreviewImage(null);
   }
 
   function cancelEdit() {
@@ -71,12 +86,45 @@ export default function PostCard({
     setEditImage(null);
     setRemoveImage(false);
     setEditText(post.text);
+    if (previewImage) URL.revokeObjectURL(previewImage);
+    setPreviewImage(null);
   }
 
   async function saveEdit() {
-    onSaveEdit(post._id, editText, removeImage ? null : editImage || undefined);
-    setIsEditing(false);
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onSaveEdit(post._id, editText, removeImage ? null : editImage || undefined);
+      setIsEditing(false);
+      if (previewImage) URL.revokeObjectURL(previewImage);
+      setPreviewImage(null);
+    } finally {
+      setSaving(false);
+    }
   }
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+
+    if (previewImage) URL.revokeObjectURL(previewImage);
+
+    setEditImage(file);
+    setRemoveImage(false);
+
+    if (!file) {
+      setPreviewImage(null);
+      return;
+    }
+
+    const nextUrl = URL.createObjectURL(file);
+    setPreviewImage(nextUrl);
+  }
+
+  const displayImage = (() => {
+    if (removeImage) return null;
+    if (previewImage) return previewImage;
+    return post.imagePath ? `${API_URL}${post.imagePath}` : null;
+  })();
 
   return (
     <Card
@@ -137,17 +185,18 @@ export default function PostCard({
               }}
             />
 
-            {post.imagePath && !removeImage && (
+            {displayImage && (
               <Box sx={{ mb: 1 }}>
-                <Box
-                  component="img"
-                  src={`${API_URL}${post.imagePath}`}
-                  sx={{ width: "100%", borderRadius: 2, mb: 1 }}
-                />
+                <Box component="img" src={displayImage} sx={{ width: "100%", borderRadius: 2, mb: 1 }} />
                 <Button
                   size="small"
                   variant="outlined"
-                  onClick={() => setRemoveImage(true)}
+                  onClick={() => {
+                    setRemoveImage(true);
+                    setEditImage(null);
+                    if (previewImage) URL.revokeObjectURL(previewImage);
+                    setPreviewImage(null);
+                  }}
                   sx={{ color: "#e57373", borderColor: "#e57373" }}
                 >
                   Remove Image
@@ -155,7 +204,7 @@ export default function PostCard({
               </Box>
             )}
 
-            {!post.imagePath || removeImage ? (
+            {(!post.imagePath || removeImage || editImage) && (
               <Button
                 variant="outlined"
                 component="label"
@@ -163,23 +212,16 @@ export default function PostCard({
                 sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)", mb: 1 }}
               >
                 {editImage ? editImage.name : "Add Image"}
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={(e) => {
-                    setEditImage(e.target.files?.[0] || null);
-                    setRemoveImage(false);
-                  }}
-                />
+                <input type="file" hidden accept="image/*" onChange={handleImageChange} />
               </Button>
-            ) : null}
+            )}
 
             <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
               <Button
                 size="small"
                 variant="contained"
                 onClick={saveEdit}
+                disabled={saving}
                 sx={{ background: "linear-gradient(135deg, #56ab2f, #a8e063)" }}
               >
                 Save
@@ -188,6 +230,7 @@ export default function PostCard({
                 size="small"
                 variant="outlined"
                 onClick={cancelEdit}
+                disabled={saving}
                 sx={{ color: "white", borderColor: "rgba(255,255,255,0.4)" }}
               >
                 Cancel
@@ -201,11 +244,7 @@ export default function PostCard({
         )}
 
         {post.imagePath && !isEditing && (
-          <Box
-            component="img"
-            src={`${API_URL}${post.imagePath}`}
-            sx={{ width: "100%", borderRadius: 2, mt: 1 }}
-          />
+          <Box component="img" src={`${API_URL}${post.imagePath}`} sx={{ width: "100%", borderRadius: 2, mt: 1 }} />
         )}
 
         <Box sx={{ display: "flex", alignItems: "center", mt: 1, gap: 1 }}>

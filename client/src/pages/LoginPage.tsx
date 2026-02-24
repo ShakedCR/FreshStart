@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box, Button, TextField, Typography,
   Divider, Alert
@@ -46,6 +46,7 @@ export default function LoginPage() {
       backgroundImage: "url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1600')",
       backgroundSize: "cover",
       backgroundPosition: "center",
+      backgroundAttachment: "fixed",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -56,6 +57,7 @@ export default function LoginPage() {
         border: "1px solid rgba(255,255,255,0.15)",
         borderRadius: 4,
         p: 4,
+        pb: 6,
         width: 400,
         boxShadow: "0 8px 32px rgba(0,0,0,0.6)"
       }}>
@@ -89,14 +91,15 @@ export default function LoginPage() {
             onChange={(e) => setUsername(e.target.value)}
             margin="normal"
             required
-            InputLabelProps={{ style: { color: "rgba(255,255,255,0.6)" } }}
             sx={{
+              mb: 3,
               "& .MuiOutlinedInput-root": {
                 color: "white",
                 "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
                 "&:hover fieldset": { borderColor: "rgba(255,255,255,0.5)" },
               }
             }}
+            InputLabelProps={{ style: { color: "rgba(255,255,255,0.6)" } }}
           />
           <TextField
             fullWidth
