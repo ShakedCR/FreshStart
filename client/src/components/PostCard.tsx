@@ -24,6 +24,7 @@ export type Post = {
   likesCount: number;
   commentsCount: number;
   createdAt: string;
+  isLiked?: boolean;
   authorId: {
     _id: string;
     username: string;

@@ -37,8 +37,6 @@ export default function FeedPage() {
   const [text, setText] = useState("");
   const [image, setImage] = useState<File | null>(null);
 
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
-
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [commentText, setCommentText] = useState("");
@@ -97,7 +95,7 @@ export default function FeedPage() {
     try {
       const updated = await editPost(postId, newText, imageArg);
       setPosts((prev) =>
-        prev.map((p) => (p._id === postId ? { ...p, text: updated.text, imagePath: updated.imagePath } : p))
+        prev.map((p) => (p._id === postId ? { ...p, text: updated.text, imagePath: updated.imagePath, isLiked: updated.isLiked } : p))
       );
     } catch (err) {
       console.error(err);
@@ -108,16 +106,14 @@ export default function FeedPage() {
     try {
       if (isLiked) {
         await unlikePost(postId);
-        setLikedPosts((prev) => {
-          const next = new Set(prev);
-          next.delete(postId);
-          return next;
-        });
-        setPosts((prev) => prev.map((p) => (p._id === postId ? { ...p, likesCount: p.likesCount - 1 } : p)));
+        setPosts((prev) => prev.map((p) => 
+          p._id === postId ? { ...p, likesCount: p.likesCount - 1, isLiked: false } : p
+        ));
       } else {
         await likePost(postId);
-        setLikedPosts((prev) => new Set(prev).add(postId));
-        setPosts((prev) => prev.map((p) => (p._id === postId ? { ...p, likesCount: p.likesCount + 1 } : p)));
+        setPosts((prev) => prev.map((p) => 
+          p._id === postId ? { ...p, likesCount: p.likesCount + 1, isLiked: true } : p
+        ));
       }
     } catch (err) {
       console.error(err);
@@ -222,7 +218,7 @@ export default function FeedPage() {
             <PostCard
               key={post._id}
               post={post}
-              isLiked={likedPosts.has(post._id)}
+              isLiked={post.isLiked || false}
               currentUsername={user?.username}
               onNavigateToProfile={(username) => navigate(`/profile/${username}`)}
               onDelete={handleDeletePost}

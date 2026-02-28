@@ -29,5 +29,15 @@ const postSchema = new Schema(
 
 export type Post = InferSchemaType<typeof postSchema>;
 
+
+export type PostWithDetails = Post & {
+  isLiked?: boolean;
+  authorId: {
+    _id: string;
+    username: string;
+    profileImage: string;
+  };
+};
+
 export const PostModel: Model<Post> =
   (mongoose.models.Post as Model<Post>) || mongoose.model<Post>("Post", postSchema);
