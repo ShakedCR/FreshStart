@@ -61,6 +61,15 @@ export default function FeedPage() {
   }, []);
 
   useEffect(() => {
+    const interval = setInterval(() => {
+      if (!loading) {
+        loadFeed();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting && nextCursor && !loading) {
         loadFeed(nextCursor);
@@ -136,6 +145,9 @@ export default function FeedPage() {
     try {
       const comment = await addComment(postId, commentText);
       setComments((prev) => ({ ...prev, [postId]: [...(prev[postId] || []), comment] }));
+      setPosts((prev) => prev.map(p => 
+        p._id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
+      ));
       setCommentText("");
     } catch (err) {
       console.error(err);
@@ -146,6 +158,9 @@ export default function FeedPage() {
     try {
       await deleteComment(commentId);
       setComments((prev) => ({ ...prev, [postId]: prev[postId].filter((c) => c._id !== commentId) }));
+      setPosts((prev) => prev.map(p => 
+        p._id === postId ? { ...p, commentsCount: p.commentsCount - 1 } : p
+      ));
     } catch (err) {
       console.error(err);
     }
