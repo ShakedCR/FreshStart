@@ -33,6 +33,7 @@ type Post = {
   likesCount: number;
   commentsCount: number;
   createdAt: string;
+  isLiked?: boolean;
   authorId: {
     _id: string;
     username: string;
@@ -62,7 +63,6 @@ export default function ProfilePage() {
   const [newUsername, setNewUsername] = useState("");
   const [newImage, setNewImage] = useState<File | null>(null);
   const [error, setError] = useState("");
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [commentText, setCommentText] = useState("");
@@ -117,12 +117,10 @@ export default function ProfilePage() {
     try {
       if (isLiked) {
         await unlikePost(postId);
-        setLikedPosts(prev => { const next = new Set(prev); next.delete(postId); return next; });
-        setPosts(prev => prev.map(p => p._id === postId ? { ...p, likesCount: p.likesCount - 1 } : p));
+        setPosts(prev => prev.map(p => p._id === postId ? { ...p, likesCount: p.likesCount - 1, isLiked: false } : p));
       } else {
         await likePost(postId);
-        setLikedPosts(prev => new Set(prev).add(postId));
-        setPosts(prev => prev.map(p => p._id === postId ? { ...p, likesCount: p.likesCount + 1 } : p));
+        setPosts(prev => prev.map(p => p._id === postId ? { ...p, likesCount: p.likesCount + 1, isLiked: true } : p));
       }
     } catch (err) {
       console.error(err);
@@ -272,10 +270,10 @@ export default function ProfilePage() {
                 )}
                 <Box sx={{ display: "flex", alignItems: "center", mt: 1, gap: 1 }}>
                   <IconButton
-                    onClick={() => handleLike(post._id, likedPosts.has(post._id))}
-                    sx={{ color: likedPosts.has(post._id) ? "#e57373" : "rgba(255,255,255,0.5)" }}
+                    onClick={() => handleLike(post._id, post.isLiked || false)}
+                    sx={{ color: post.isLiked ? "#e57373" : "rgba(255,255,255,0.5)" }}
                   >
-                    {likedPosts.has(post._id) ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+                    {post.isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
                   </IconButton>
                   <Typography variant="body2" color="rgba(255,255,255,0.6)">{post.likesCount}</Typography>
 
