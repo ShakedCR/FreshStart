@@ -94,7 +94,7 @@ Deployment is managed using PM2.
 
 Swagger documentation is available at:
 
-/api-docs
+https://node70.cs.colman.ac.il/api/api-docs/
 
 💻 Running Locally
 1. Clone the repository
