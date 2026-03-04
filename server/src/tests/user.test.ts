@@ -35,6 +35,7 @@ describe("Users API", () => {
   afterAll(async () => {
     await mongoose.connection.collection("users").deleteMany({});
     await mongoose.connection.collection("posts").deleteMany({});
+    await mongoose.disconnect();
   });
 
   it("should get user profile successfully", async () => {
@@ -65,6 +66,7 @@ describe("Users API", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.username).toBe("newusername");
+    expect(res.body.passwordHash).toBeUndefined();
   });
 
   it("should fail to update to existing username", async () => {
@@ -79,6 +81,18 @@ describe("Users API", () => {
     expect(res.body.error).toBe("Username already taken");
   });
 
+  it("should fail to update when user does not exist", async () => {
+    await mongoose.connection.collection("users").deleteMany({});
+
+    const res = await request(app)
+      .put("/users/me/update")
+      .set("Authorization", `Bearer ${token}`)
+      .field("username", "x");
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("User not found");
+  });
+
   it("should get user posts successfully", async () => {
     await PostModel.create({ authorId: userId, text: "Test post" });
 
@@ -91,9 +105,24 @@ describe("Users API", () => {
     expect(res.body[0].text).toBe("Test post");
   });
 
-  it("should fail without auth", async () => {
+  it("should fail to get posts for non-existing user", async () => {
     const res = await request(app)
-      .get("/users/testuser");
+      .get("/users/nonexistent/posts")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("User not found");
+  });
+
+  it("should fail without auth", async () => {
+    const res = await request(app).get("/users/testuser");
+    expect(res.status).toBe(401);
+  });
+
+  it("should fail to update without auth", async () => {
+    const res = await request(app)
+      .put("/users/me/update")
+      .field("username", "newusername");
 
     expect(res.status).toBe(401);
   });
